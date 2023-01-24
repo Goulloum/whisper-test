@@ -6,12 +6,13 @@ import os
 import whisper
 import sys
 import time
+from translate import Translator
 
 # Calculate execution time of the script
 startTime = time.time()
 
 
-def annotate(clip, txt, txt_color='white', fontsize=20, font='Xolonium-Bold'):
+def annotate(clip, txt, txt_color='white', fontsize=20, font='Comic-Sans-MS'):
     """ Writes a text at the bottom of the clip. """
     txtclip = TextClip(txt, fontsize=fontsize, font=font,
                        color=txt_color, method="caption", size=(clip.w, None))
@@ -29,14 +30,16 @@ audio = video.audio.write_audiofile("tmp.mp3")
 
 # Load whisper model
 # If translate is required then use the small model from whisper else use the stable base model from stable-whisper
-if len(sys.argv) > 2 and sys.argv[2] == "translate":
-    model = whisper.load_model("medium")
+if len(sys.argv) > 4 and sys.argv[3] == "translate" and sys.argv[4] != "en":
+    model = whisper.load_model(sys.argv[2])
     result = model.transcribe("tmp.mp3", task="translate")
+    translator = Translator(
+        to_lang=sys.argv[4], provider="libre", base_url="http://localhost:5000/")
 else:
-    model = stable_whisper.load_model("base")
+    model = stable_whisper.load_model(sys.argv[2])
     result = model.transcribe("tmp.mp3")
 
-
+print("Transcription finished!")
 # Check si il y a un trou entre le dernier text et celui actuel et si oui rajoute le clip correspondant a la duree du trou
 annotatedClips = []
 prevEndTime = 0
@@ -45,8 +48,13 @@ for seg in result["segments"]:
         annotatedClips.append(video.subclip(
             prevEndTime, seg["start"] if seg["start"] < video.duration else video.duration))
 
+    if translator:
+        text = translator.translate(seg["text"])
+        print(seg["text"])
+    else:
+        text = seg["text"]
     annotatedClips.append(annotate(video.subclip(
-        seg["start"], seg["end"] if seg["end"] < video.duration else video.duration), seg["text"]))
+        seg["start"], seg["end"] if seg["end"] < video.duration else video.duration), text))
 
     prevEndTime = seg["end"]
 
