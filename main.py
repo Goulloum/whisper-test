@@ -30,11 +30,12 @@ audio = video.audio.write_audiofile("tmp.mp3")
 
 # Load whisper model
 # If translate is required then use the small model from whisper else use the stable base model from stable-whisper
-if len(sys.argv) > 4 and sys.argv[3] == "translate" and sys.argv[4] != "en":
+if len(sys.argv) > 4 and sys.argv[3] == "translate":
     model = whisper.load_model(sys.argv[2])
     result = model.transcribe("tmp.mp3", task="translate")
-    translator = Translator(
-        to_lang=sys.argv[4], provider="libre", base_url="http://localhost:5000/")
+    if sys.argv[4] != "en":
+        translator = Translator(
+            to_lang=sys.argv[4], provider="libre", base_url="http://localhost:5000/")
 else:
     model = stable_whisper.load_model(sys.argv[2])
     result = model.transcribe("tmp.mp3")
